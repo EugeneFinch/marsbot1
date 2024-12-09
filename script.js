@@ -3,24 +3,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const userInput = document.getElementById('user-input');
   const submitBtn = document.getElementById('submit-btn');
   const buttonsDiv = document.getElementById('buttons');
+  const shutdownBtn = document.getElementById('shutdown-btn');
   const closeBtn = document.getElementById('close-btn');
-  const inputArea = document.getElementById('input-area');
+  const rebootOptions = document.getElementById('reboot-options');
+  const rebootContinueBtn = document.getElementById('reboot-continue-btn');
+  const rebootNewBtn = document.getElementById('reboot-new-btn');
 
   let state = JSON.parse(localStorage.getItem('marsBotState')) || { step: 0, name: '' };
+  let answers = JSON.parse(localStorage.getItem('userAnswers')) || {};
 
   // Function to simulate typing animation
   function displayMessage(message) {
     output.innerHTML = '';
+    const trimmedMessage = message.trim();
     const typingSpan = document.createElement('span');
     typingSpan.classList.add('typing');
     output.appendChild(typingSpan);
 
     let index = 0;
     function typeCharacter() {
-      if (index < message.length) {
-        typingSpan.textContent += message[index];
+      if (index < trimmedMessage.length) {
+        typingSpan.textContent += trimmedMessage[index];
         index++;
         setTimeout(typeCharacter, 50);
+      } else {
+        typingSpan.classList.remove('typing');
       }
     }
 
@@ -32,35 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('marsBotState', JSON.stringify(state));
   }
 
-  // Hide input field and submit button
-  function hideInputArea() {
-    inputArea.classList.add('hidden');
-  }
-
-  // Show input area when asking for the name
-  function askForName() {
-    inputArea.classList.remove('hidden');
-    displayMessage("Welcome stranger, how should I call you?");
-  }
-
-
-
-  // Handle name input and hide input field afterward
-  function handleNameInput() {
-    state.name = userInput.value.trim();
-    if (state.name) {
-      saveState();
-      userInput.value = '';
-      inputArea.classList.add('hidden'); // Hide the input area after entering the name
-      displayMessage(`Good to know you, ${state.name}. Ready to settle on Mars?`);
-
-      setButtons([
-        { text: 'Huh? Why?', action: showLore },
-        { text: 'Hell Yeah', action: promptWalletConnection }
-      ]);
-    } else {
-      displayMessage("Please enter a valid name.");
-    }
+  // Save user answers to localStorage
+  function saveAnswer(key, value) {
+    answers[key] = value;
+    localStorage.setItem('userAnswers', JSON.stringify(answers));
   }
 
   // Clear button options
@@ -81,33 +63,101 @@ document.addEventListener('DOMContentLoaded', () => {
     buttonsDiv.classList.remove('hidden');
   }
 
+  // Show input area when asking for the name
+  function askForName() {
+    document.getElementById('input-area').classList.remove('hidden');
+    submitBtn.classList.remove('hidden');
+    displayMessage("Welcome stranger, how should I call you?");
+  }
+
+  // Handle name input and hide input field afterward
+  function handleNameInput() {
+    state.name = userInput.value.trim();
+    if (state.name) {
+      saveState();
+      userInput.value = '';
+      userInput.placeholder = '';
+      document.getElementById('input-area').classList.add('hidden');
+      submitBtn.classList.add('hidden');
+      displayMessage(`Good to know you, ${state.name}. Ready to settle on Mars?`);
+
+      setButtons([
+        { text: 'Huh? Why?', action: showLore },
+        { text: 'Hell Yeah', action: promptWalletConnection }
+      ]);
+    } else {
+      displayMessage("Please enter a valid name.");
+    }
+  }
+
   // Show lore about Mars settlement
   function showLore() {
     displayMessage("Mars settlement is humanity's next great adventure. It's time to take part.");
+    saveAnswer('selectedOption', 'showLore');
     setButtons([
-      { text: "Ok got it, let's do it", action: promptWalletConnection }
+      { text: "Ok got it, let's do it", action: promptWalletConnection },
+      { text: "Nah, another time", action: shutdownBot }
     ]);
   }
 
   // Prompt wallet connection
   function promptWalletConnection() {
     displayMessage("Let's get you settled! Please connect your wallet to proceed.");
+    saveAnswer('selectedOption', 'promptWalletConnection');
     setButtons([
-      { text: 'Connect Wallet', action: mintLandPlot }
+      { text: 'Connect Wallet', action: mintLandPlot },
+      { text: 'Do it Later', action: shutdownBot }
     ]);
   }
 
   // Mint land plot
   function mintLandPlot() {
     displayMessage("Mint your land plot on the Mars globe.");
+    saveAnswer('selectedOption', 'mintLandPlot');
     setButtons([
-      { text: 'Mint Land Plot', action: landMinted }
+      { text: 'Mint Land Plot', action: landMinted },
+      { text: 'Do it Later', action: shutdownBot }
     ]);
   }
 
   // After minting land plot
   function landMinted() {
-    displayMessage("Congrats! Your land plot is now yours. Time to build your colony.");
+    displayMessage("Congrats, Ser! Your land plot is now yours. Now it’s time to start building on your land to settle it fully. To build, you need Colony Tokens.");
+    saveAnswer('landMinted', true);
+    setButtons([
+      { text: 'Buy Tokens on DEX', action: buyTokens },
+      { text: 'Wait to Earn Tokens', action: waitForTokens }
+    ]);
+  }
+
+  // Redirect to buy tokens on DEX
+  function buyTokens() {
+    displayMessage("Redirecting to the DEX to buy Colony Tokens...");
+    saveAnswer('selectedOption', 'buyTokens');
+    window.open('https://example-dex.com', '_blank');
+  }
+
+  // Wait to earn tokens over time
+  function waitForTokens() {
+    displayMessage("You will earn 1 Colony Token per day. Your next token will be available tomorrow.");
+    saveAnswer('selectedOption', 'waitForTokens');
+  }
+
+    // Shut down the bot and show reboot options
+  function shutdownBot() {
+    displayMessage("Mars terminal shutting down. See you soon, pioneer.");
+    setTimeout(() => {
+      document.getElementById('mars-bot').classList.add('hidden');
+      rebootOptions.classList.remove('hidden');
+    }, 1500); // Add a delay to allow the shutdown message to display fully
+  }
+
+  // Reboot the bot
+  function rebootBot() {
+    rebootOptions.classList.add('hidden');
+    document.getElementById('mars-bot').classList.remove('hidden');
+    displayMessage(`Welcome back, ${state.name}. Ready to continue settling Mars?`);
+    setButtons([{ text: 'Continue', action: promptWalletConnection }]);
   }
 
   // Event listeners
@@ -117,17 +167,16 @@ document.addEventListener('DOMContentLoaded', () => {
       handleNameInput();
     }
   });
-  closeBtn.addEventListener('click', () => {
-    displayMessage("Mars terminal shutting down. See you soon, pioneer.");
-    hideInputArea();
-    clearButtons();
+  closeBtn.addEventListener('click', shutdownBot);
+  rebootContinueBtn.addEventListener('click', rebootBot);
+  rebootNewBtn.addEventListener('click', () => {
+    localStorage.clear();
+    location.reload();
   });
 
   // Initial launch logic
   if (state.name) {
-    hideInputArea(); // Ensure input field is hidden if name is already set
-    displayMessage(`Welcome back, ${state.name}. Ready to continue settling Mars?`);
-    setButtons([{ text: 'Continue', action: promptWalletConnection }]);
+    rebootBot();
   } else {
     askForName();
   }
