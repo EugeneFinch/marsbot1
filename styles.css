@@ -180,3 +180,7 @@ body {
 .hidden {
   display: none;
 }
+
+#input-area {
+  outline: 2px solid red;  /* Temporarily add this to see if the element is still being displayed */
+}

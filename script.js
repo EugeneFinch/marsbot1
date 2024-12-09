@@ -3,11 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const userInput = document.getElementById('user-input');
   const submitBtn = document.getElementById('submit-btn');
   const buttonsDiv = document.getElementById('buttons');
-  const shutdownBtn = document.getElementById('shutdown-btn');
   const closeBtn = document.getElementById('close-btn');
   const rebootOptions = document.getElementById('reboot-options');
   const rebootContinueBtn = document.getElementById('reboot-continue-btn');
   const rebootNewBtn = document.getElementById('reboot-new-btn');
+  const inputArea = document.getElementById('input-area');
 
   let state = JSON.parse(localStorage.getItem('marsBotState')) || { step: 0, name: '' };
   let answers = JSON.parse(localStorage.getItem('userAnswers')) || {};
@@ -15,15 +15,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to simulate typing animation
   function displayMessage(message) {
     output.innerHTML = '';
-    const trimmedMessage = message.trim();
     const typingSpan = document.createElement('span');
     typingSpan.classList.add('typing');
     output.appendChild(typingSpan);
 
     let index = 0;
     function typeCharacter() {
-      if (index < trimmedMessage.length) {
-        typingSpan.textContent += trimmedMessage[index];
+      if (index < message.length) {
+        typingSpan.textContent += message[index];
         index++;
         setTimeout(typeCharacter, 50);
       } else {
@@ -65,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Show input area when asking for the name
   function askForName() {
-    document.getElementById('input-area').classList.remove('hidden');
+    inputArea.classList.remove('hidden');
     submitBtn.classList.remove('hidden');
     displayMessage("Welcome stranger, how should I call you?");
   }
@@ -76,9 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.name) {
       saveState();
       userInput.value = '';
-      userInput.placeholder = '';
-      document.getElementById('input-area').classList.add('hidden');
-      submitBtn.classList.add('hidden');
+      
+      const inputArea = document.getElementById('input-area');
+      inputArea.classList.add('hidden');
+      
+      // Force redraw
+      inputArea.offsetHeight; 
+
       displayMessage(`Good to know you, ${state.name}. Ready to settle on Mars?`);
 
       setButtons([
@@ -143,21 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
     saveAnswer('selectedOption', 'waitForTokens');
   }
 
-    // Shut down the bot and show reboot options
+  // Shut down the bot
   function shutdownBot() {
     displayMessage("Mars terminal shutting down. See you soon, pioneer.");
     setTimeout(() => {
       document.getElementById('mars-bot').classList.add('hidden');
-      rebootOptions.classList.remove('hidden');
-    }, 1500); // Add a delay to allow the shutdown message to display fully
-  }
-
-  // Reboot the bot
-  function rebootBot() {
-    rebootOptions.classList.add('hidden');
-    document.getElementById('mars-bot').classList.remove('hidden');
-    displayMessage(`Welcome back, ${state.name}. Ready to continue settling Mars?`);
-    setButtons([{ text: 'Continue', action: promptWalletConnection }]);
+    }, 1500);
   }
 
   // Event listeners
@@ -167,17 +161,15 @@ document.addEventListener('DOMContentLoaded', () => {
       handleNameInput();
     }
   });
+  
   closeBtn.addEventListener('click', shutdownBot);
-  rebootContinueBtn.addEventListener('click', rebootBot);
-  rebootNewBtn.addEventListener('click', () => {
-    localStorage.clear();
-    location.reload();
-  });
 
   // Initial launch logic
   if (state.name) {
-    rebootBot();
+    inputArea.classList.add('hidden'); // Hide input area if the name exists
+    displayMessage(`Welcome back, ${state.name}. Ready to continue settling Mars?`);
+    setButtons([{ text: 'Continue', action: promptWalletConnection }]);
   } else {
-    askForName();
+    askForName(); // Prompt the user for their name
   }
 });
